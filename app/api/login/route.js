@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 
+
 export async function POST(req, res) {
     try {
         const { email, password } = await req.json();
@@ -42,30 +43,30 @@ export async function POST(req, res) {
         }
 
         
-        const freshToken = jwt.sign(
-            { userId: user._id.toString(), email: user.email },
-            process.env.JWT_SECRET,
-            { expiresIn: "15m" }  
-        );
+        // const freshToken = jwt.sign(
+        //     { userId: user._id.toString(), email: user.email },
+        //     process.env.JWT_SECRET,
+        //     { expiresIn: "15m" }  
+        // );
 
 
 
         const res = NextResponse.json({
             success: true,
             status: 200,
-            accessToken: freshToken,
+       //     accessToken: freshToken,
             message: "Login successful"
         });
 
 
-        res.cookies.set({
-            name: "accessToken",
-            value: freshToken,
-            httpOnly: true,
-            path: "/",
-            maxAge: 15 * 60, // 15 minutes
-            sameSite: "strict",
-        })
+        // res.cookies.set({
+        //     name: "accessToken",
+        //     value: freshToken,
+        //     httpOnly: true,
+        //     path: "/",
+        //     maxAge: 15 * 60, // 15 minutes
+        //     sameSite: "strict",
+        // })
 
         return res
 
