@@ -23,7 +23,8 @@ export default function DashboardPage() {
   const [otherUser, setOtherUser] = useState("");
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
-
+  const messagesEndRef = useRef(null);
+  const [socket, setsocket] = useState(null)
 
 
   // Initialize socket
@@ -36,6 +37,7 @@ export default function DashboardPage() {
     const setupSocket = async () => {
       const socket = await getSocket();
       socketRef.current = socket;
+      setsocket(socket);
 
       socketRef.current.on("connect", () => {
 
@@ -70,26 +72,26 @@ export default function DashboardPage() {
 
 
   useEffect(() => {
-  if (!socketRef.current) return;
+    if (!socketRef.current) return;
 
-  socketRef.current.on("typing", ({ fromUserId }) => {
-        console.log("👀 typing from:", fromUserId);
-    if (fromUserId === otherUser?._id) {
-      setIsTyping(true);
-    }
-  });
+    socketRef.current.on("typing", ({ fromUserId }) => {
+      console.log("👀 typing from:", fromUserId);
+      if (fromUserId === otherUser?._id) {
+        setIsTyping(true);
+      }
+    });
 
-  socketRef.current.on("stop-typing", ({ fromUserId }) => {
-    if (fromUserId === otherUser?._id) {
-      setIsTyping(false);
-    }
-  });
+    socketRef.current.on("stop-typing", ({ fromUserId }) => {
+      if (fromUserId === otherUser?._id) {
+        setIsTyping(false);
+      }
+    });
 
-  return () => {
-    socketRef.current.off("typing");
-    socketRef.current.off("stop-typing");
-  };
-}, [otherUser]);
+    return () => {
+      socketRef.current.off("typing");
+      socketRef.current.off("stop-typing");
+    };
+  }, [otherUser]);
 
 
 
@@ -110,6 +112,13 @@ export default function DashboardPage() {
     fetchAllUsers();
   }, [session?.user?.name]);
 
+
+  useEffect(() => {
+    const container = messagesEndRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight; // scroll to bottom
+    }
+  }, [allMessage]);
 
   const isUserOnline = (userId) => {
     return onlineUsers.includes(userId);
@@ -179,10 +188,10 @@ export default function DashboardPage() {
         </div>
 
         <div className="rightSide w-[70vw] bg-white h-screen flex flex-col">
-          <Topbar isTyping={isTyping} name={otherUser?.name} srcURL={otherUser?.picture || "/globe.svg"} profileClicked={isProfileClicked} isOnline={isUserOnline(otherUser?._id)} />
+          <Topbar socketRef={socket} otherUserId={otherUser?._id} isTyping={isTyping} name={otherUser?.name} srcURL={otherUser?.picture || "/globe.svg"} profileClicked={isProfileClicked} isOnline={isUserOnline(otherUser?._id)} />
           {isProfileClicked ? (
             <>
-              <div className="overflow-y-auto p-4 flex flex-col mb-20">
+              <div className="overflow-y-auto pb-14 pl-5 pr-5 flex flex-col" ref={messagesEndRef}>
                 {allMessage.map((item, index) => (
                   <Message
                     key={index}

@@ -22,6 +22,7 @@ export default function handler(req, res) {
   }
 
   const onlineUsers = new Map();
+  const lastSeenUsers = new Map();
 
   console.log("🔌 Socket server starting");
 
@@ -34,30 +35,30 @@ export default function handler(req, res) {
     console.log("✅ CONNECTED: server side ", socket.id);
 
 
-        // TYPING START
-      socket.on("typing", ({ fromUserId, toUserId }) => {
-        console.log("✍️ TYPING EVENT:", { fromUserId, toUserId });
+    // TYPING START
+    socket.on("typing", ({ fromUserId, toUserId }) => {
+      console.log("✍️ TYPING EVENT:", { fromUserId, toUserId });
 
-        const receiverSocketId = onlineUsers.get(toUserId);
-        if (receiverSocketId) {
-          io.to(receiverSocketId).emit("typing", { fromUserId });
-          console.log("➡️ TYPING SENT TO:", toUserId);
-        } else {
-          console.log("⚠️ RECEIVER OFFLINE:", toUserId);
-        }
-      });
+      const receiverSocketId = onlineUsers.get(toUserId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("typing", { fromUserId });
+        console.log("➡️ TYPING SENT TO:", toUserId);
+      } else {
+        console.log("⚠️ RECEIVER OFFLINE:", toUserId);
+      }
+    });
 
 
-          // TYPING STOP
-      socket.on("stop-typing", ({ fromUserId, toUserId }) => {
-        console.log("🛑 STOP TYPING:", { fromUserId, toUserId });
+    // TYPING STOP
+    socket.on("stop-typing", ({ fromUserId, toUserId }) => {
+      console.log("🛑 STOP TYPING:", { fromUserId, toUserId });
 
-        const receiverSocketId = onlineUsers.get(toUserId);
-        if (receiverSocketId) {
-          io.to(receiverSocketId).emit("stop-typing", { fromUserId });
-          console.log("➡️ STOP TYPING SENT TO:", toUserId);
-        }
-      });
+      const receiverSocketId = onlineUsers.get(toUserId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("stop-typing", { fromUserId });
+        console.log("➡️ STOP TYPING SENT TO:", toUserId);
+      }
+    });
 
 
 
@@ -92,10 +93,21 @@ export default function handler(req, res) {
     socket.on("disconnect", (reason) => {
 
       for (const [userId, id] of onlineUsers.entries()) {
-        if (id === socket.id) onlineUsers.delete(userId);
+        if (id === socket.id) {
+          onlineUsers.delete(userId);
+          lastSeenUsers.set(userId, new Date().toISOString());
+          console.log(`User ${userId} disconnected. Last seen saved.`);
+          console.log(`🔴 User ${userId} disconnected`);
+        }
       }
       console.log("🔴 DISCONNECT:", socket.id);
       io.emit("online-users", [...onlineUsers.keys()]);
+
+      socket.on("get-last-seen", (userId, callback) => {
+        console.log("Server received get-last-seen for:", userId);
+        callback(lastSeenUsers.get(userId) || null);
+      });
+
       console.log("❌ DISCONNECTED:", socket.id, reason);
     });
   });

@@ -33,6 +33,31 @@ export default function MessageArea({
   const sendMessage = () => {
     if (!message.trim()) return;
 
+
+    const myHeaders = new Headers();
+    myHeaders.append("Content-Type", "application/json");
+
+    const raw = JSON.stringify({
+      "toUser": toUser,
+      "fromUser": fromUser,
+      "message": {
+        "sender": fromUser,
+        "text": message
+      }
+    });
+
+    const requestOptions = {
+      method: "POST",
+      headers: myHeaders,
+      body: raw,
+      redirect: "follow"
+    };
+
+    fetch("http://localhost:3000/api/message", requestOptions)
+      .then((response) => response.text())
+      .then((result) => console.log(result))
+      .catch((error) => console.error(error));
+
     onMessageSent({
       sender: fromUser,
       text: message,
