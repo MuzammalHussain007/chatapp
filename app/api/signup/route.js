@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken"
 
 
 export async function POST(req) {
-    const { email, password } = await req.json()
+    const { name,email, password } = await req.json()
 
 
     const client = await clientPromise;
@@ -30,6 +30,9 @@ export async function POST(req) {
     const result = await collection.insertOne({
         email: email,
         password: hashpasword,
+        name : name,
+        provider :"mannual",
+        pciture  : "",
         createdAt: new Date()
     })
 

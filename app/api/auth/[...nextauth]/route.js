@@ -31,8 +31,10 @@ export const authOptions = {
         if (!isValid) return null;
 
         return {
-          id: user._id.toString(),
+          _id: user._id.toString(),
           email: user.email,
+          name : user.name,
+          image : user.picture
         };
       },
     }),
@@ -52,19 +54,41 @@ export const authOptions = {
     error: "/login",
   },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      const client = await clientPromise;
+      const db = client.db("authentication");
+      const collection = db.collection("user");
+      const existingUser = await collection.findOne({ email: user.email });
+      if (!existingUser) {
+        // Create new user
+        await collection.insertOne({
+          email: user.email,
+          name: user.name || profile.name || "",
+          provider: account.provider,
+          createdAt: new Date(),
+        });
+      }
+
+      return true; // allow sign-in
+    },
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
+        token._id = user._id.toString();
+        token.name = user.name;
+        token.picture = user.image;
         token.accessToken = jwt.sign(
-          { userId: user.id, email: user.email },
+          { userId: user._id, email: user.email },
           process.env.JWT_SECRET,
           { expiresIn: "15m" }
         );
       }
       return token;
     },
+
     async session({ session, token }) {
-      session.user.id = token.id;
+      session.user._id = token._id;
+      session.user.name = token.name;
+      session.user.picture = token.picture;
       session.accessToken = token.accessToken;
       return session;
     },

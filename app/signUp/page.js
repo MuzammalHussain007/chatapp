@@ -8,6 +8,7 @@ export default function SignupPage() {
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [name, setname] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -21,7 +22,7 @@ export default function SignupPage() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({name, email, password })
       })
 
       const data = await res.json()
@@ -54,6 +55,15 @@ export default function SignupPage() {
         )}
 
         <div className="space-y-4">
+
+          <input
+            type="text"
+            placeholder="Name"
+            value={name}
+            onChange={e => setname(e.target.value)}
+            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+
           <input
             type="email"
             placeholder="Email"
