@@ -52,7 +52,7 @@ export default function DashboardPage() {
     };
   }, [session?.user?.name]);
 
-  // Fetch all users after session is ready
+  
   useEffect(() => {
     if (!session?.user?.name) return;
 
@@ -70,15 +70,13 @@ export default function DashboardPage() {
     fetchAllUsers();
   }, [session?.user?.name]);
 
-  // Fetch messages with selected user
   const handleListMessage = async (selectedUser) => {
     try {
       const res = await fetch(
-        `/api/chats?user1=${session.user.name}&user2=${selectedUser}`
+        `/api/chats?user1=${session.user._id}&user2=${selectedUser}`
       );
       const data = await res.json();
       const msgs = data?.data?.message || [];
-      // Reverse so newest messages appear at bottom
       setAllMessage([...msgs].reverse());
     } catch (error) {
       console.error("Fetch message error:", error);
@@ -87,9 +85,9 @@ export default function DashboardPage() {
 
   const handleProfileClick = (user) => {
     setIsProfileClicked(true);
-    setAllMessage([]); // clear old messages immediately
+    setAllMessage([]); 
     setCurrentUser(user);
-    handleListMessage(user.name);
+    handleListMessage(user._id);
 
     socketRef.current?.emit("join-chat", {
       userId: session.user._id,
@@ -110,7 +108,6 @@ export default function DashboardPage() {
       <Topbar name={session.user.name} srcURL={session.user.image} />
 
       <div className="flex h-[calc(100vh-34px)]">
-        {/* Left sidebar - users */}
         <div className="leftside w-[30vw] bg-green-50 p-7 overflow-y-auto">
           <div className="flex flex-col gap-3">
             {AllUser.length === 0 && <div>No users found</div>}
@@ -125,7 +122,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Right side - messages */}
         <div className="rightSide w-[70vw] bg-white h-screen flex flex-col">
           {isProfileClicked ? (
             <>
@@ -149,8 +145,6 @@ export default function DashboardPage() {
                   toUser={currentUser._id}
                   fromUser={session.user._id}
                   onMessageSent={(newMessage) => {
-                    setAllMessage((prev) => [...prev, newMessage]);
-                    // Emit to socket
                     if (socketRef.current) {
                       socketRef.current.emit("send-message", {
                         fromUserId: session.user._id,
