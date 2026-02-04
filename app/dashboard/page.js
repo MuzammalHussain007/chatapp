@@ -20,7 +20,7 @@ export default function DashboardPage() {
   const [isProfileClicked, setIsProfileClicked] = useState(false);
   const [currentUser, setCurrentUser] = useState("");
 
- 
+
   // Initialize socket
   const socketRef = useRef(null);
   useEffect(() => {
@@ -32,11 +32,14 @@ export default function DashboardPage() {
       const socket = await getSocket();
       socketRef.current = socket;
 
-      socket.emit("join", session.user.name);
+      socket.emit("join", session.user._id);
 
+      socket.on("receive-message", (data) => {
+        console.log("Received message via socket:", data);
 
-      socket.on("receive-message", (message) => {
-        setAllMessage((prev) => [message, ...prev]);
+        if (data && data.message) {
+          setAllMessage((prev) => [...prev, data.message]);
+        }
       });
     };
 
@@ -132,7 +135,7 @@ export default function DashboardPage() {
                     key={index}
                     text={item.text}
                     sender={item.name}
-                    isOwnMessage={item.sender === session.user.name}
+                    isOwnMessage={item.sender === session.user._id}
                     timestamp={new Date(item.createdAt).toLocaleTimeString("en-US", {
                       hour: "numeric",
                       minute: "2-digit",
