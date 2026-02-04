@@ -206,7 +206,7 @@ export default function DashboardPage() {
                   />
                 ))}
               </div>
-              <div className="sticky bottom-0 bg-white border-t p-4">
+              <div className="sticky bottom-0 border-t p-4 mt-auto bg-white">
                 <MessageArea
                   socketRef={socketRef}
                   toUser={otherUser._id}
