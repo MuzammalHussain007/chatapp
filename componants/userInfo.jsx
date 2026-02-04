@@ -1,7 +1,7 @@
 // components/UserInfo.js
 import Image from 'next/image';
 
-const UserInfo = ({ username, imageSrc , onClick }) => {
+const UserInfo = ({ username, imageSrc , onClick ,isOnline}) => {
   return (
     <div className="current-user-info flex items-center justify-between p-5 border-2 border-black" onClick={onClick}>
       <div className="username text-xl font-semibold">
@@ -9,10 +9,9 @@ const UserInfo = ({ username, imageSrc , onClick }) => {
       </div>
 
       <div className="image">
-        <div className="">
+        <div className="relative">
           <Image
-        
-            src={imageSrc.trim() || "/globe.svg"}
+            src={imageSrc|| "/globe.svg"}
             alt="/globe.svg"
             width={30} 
             height={30} 

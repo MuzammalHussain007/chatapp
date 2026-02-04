@@ -1,12 +1,10 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { getSocket } from "@/lib/socket-client";
-
-export default function UserProfile({ srcURL, currentlyLoginUserName, currentlyLoginUserId }) {
+export default function UserProfile({ srcURL, currentlyLoginUserName,logedInUserId}) {
   const [isOnline, setIsOnline] = useState(false);
 
-//   useEffect(() => {
+
 //     if (!currentlyLoginUserId) return;
 
 //     const socket = getSocket();
@@ -35,7 +33,7 @@ export default function UserProfile({ srcURL, currentlyLoginUserName, currentlyL
 //   }, [currentlyLoginUserId]);
 
   return (
-    <div className="pl-4">
+    <div className="">
       <div className="flex items-center gap-4">
         <div className="relative">
           <Image
@@ -48,14 +46,14 @@ export default function UserProfile({ srcURL, currentlyLoginUserName, currentlyL
           />
           <span
             className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
-              isOnline ? "bg-green-500" : "bg-gray-400"
+              logedInUserId ? "bg-green-500" : "bg-gray-400"
             }`}
           />
         </div>
         <div>
           <p className="font-semibold">{currentlyLoginUserName}</p>
-          <p className={`text-sm ${isOnline ? "text-green-600" : "text-gray-500"}`}>
-            {isOnline ? "Online" : "Offline"}
+          <p className={`text-sm ${logedInUserId ? "text-green-600" : "text-gray-500"}`}>
+            {logedInUserId ? "Online" : "Offline"}
           </p>
         </div>
       </div>

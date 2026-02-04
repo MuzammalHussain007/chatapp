@@ -7,16 +7,21 @@ export const config = {
   },
 };
 
+export const runtime = "nodejs"; // 🔥 REQUIRED
+
 export const getRoomId = (id1, id2) => {
   // Sort IDs so that (UserA, UserB) and (UserB, UserA) produce the same string
   return [id1, id2].sort().join("-");
 };
+
 
 export default function handler(req, res) {
   if (res.socket.server.io) {
     res.end();
     return;
   }
+
+  const onlineUsers = new Map();
 
   console.log("🔌 Socket server starting");
 
@@ -25,8 +30,44 @@ export default function handler(req, res) {
     addTrailingSlash: false,
   });
 
-  io.on("connect", (socket) => {
-    console.log("✅ CONNECTED:", socket.id);
+  io.on("connection", (socket) => {
+    console.log("✅ CONNECTED: server side ", socket.id);
+
+
+        // TYPING START
+      socket.on("typing", ({ fromUserId, toUserId }) => {
+        console.log("✍️ TYPING EVENT:", { fromUserId, toUserId });
+
+        const receiverSocketId = onlineUsers.get(toUserId);
+        if (receiverSocketId) {
+          io.to(receiverSocketId).emit("typing", { fromUserId });
+          console.log("➡️ TYPING SENT TO:", toUserId);
+        } else {
+          console.log("⚠️ RECEIVER OFFLINE:", toUserId);
+        }
+      });
+
+
+          // TYPING STOP
+      socket.on("stop-typing", ({ fromUserId, toUserId }) => {
+        console.log("🛑 STOP TYPING:", { fromUserId, toUserId });
+
+        const receiverSocketId = onlineUsers.get(toUserId);
+        if (receiverSocketId) {
+          io.to(receiverSocketId).emit("stop-typing", { fromUserId });
+          console.log("➡️ STOP TYPING SENT TO:", toUserId);
+        }
+      });
+
+
+
+    socket.on("join", (userId) => {
+      console.log("🟢 JOIN RECEIVED:", userId);
+      onlineUsers.set(userId, socket.id);
+      console.log("ONLINE USERS:", [...onlineUsers.keys()]);
+      io.emit("online-users", [...onlineUsers.keys()]);
+    });
+
 
 
     socket.on("join-chat", ({ userId, otherUserId }) => {
@@ -49,6 +90,12 @@ export default function handler(req, res) {
     });
 
     socket.on("disconnect", (reason) => {
+
+      for (const [userId, id] of onlineUsers.entries()) {
+        if (id === socket.id) onlineUsers.delete(userId);
+      }
+      console.log("🔴 DISCONNECT:", socket.id);
+      io.emit("online-users", [...onlineUsers.keys()]);
       console.log("❌ DISCONNECTED:", socket.id, reason);
     });
   });

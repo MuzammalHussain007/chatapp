@@ -1,65 +1,81 @@
-// components/MessageArea.js
-import { useState, useEffect } from 'react';
+"use client";
+import { useState, useRef } from "react";
 
-import { getSocket } from "@/lib/socket-client";
+export default function MessageArea({
+  fromUser,
+  toUser,
+  socketRef,
+  onMessageSent,
+}) {
+  const [message, setMessage] = useState("");
+  const typingTimeoutRef = useRef(null);
 
-const MessageArea = ({ toUser, fromUser, onMessageSent }) => {
-  const [inputText, setInputText] = useState("");
-  const handleSend = async () => {
-    if (!inputText.trim()) return;
+  // 🔹 Typing handler
+  const handleTyping = () => {
+    socketRef.current?.emit("typing", {
+      fromUserId: fromUser,
+      toUserId: toUser,
+    });
 
-    const message = {
-      sender: fromUser,
-      text: inputText,
-      createdAt: new Date().toISOString(),
-    };
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
 
-
-    console.log("Sending message to API:", { toUser, fromUser, message });
-
-    try {
-      const res = await fetch("/api/message", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          toUser,
-          fromUser,
-          message,
-        }),
+    typingTimeoutRef.current = setTimeout(() => {
+      socketRef.current?.emit("stop-typing", {
+        fromUserId: fromUser,
+        toUserId: toUser,
       });
+    }, 800);
+  };
 
-      if (!res.ok) {
-        const data = await res.json();
-        console.error("API Error:", data);
-        return;
-      }
-      onMessageSent(message);
-      setInputText("");
+  // 🔹 Send message
+  const sendMessage = () => {
+    if (!message.trim()) return;
 
-    } catch (error) {
-      console.error("Send message failed:", error);
+    onMessageSent({
+      sender: fromUser,
+      text: message,
+      createdAt: new Date().toISOString(),
+    });
+
+    socketRef.current?.emit("stop-typing", {
+      fromUserId: fromUser,
+      toUserId: toUser,
+    });
+
+    setMessage("");
+  };
+
+  // 🔹 Handle Enter key
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // prevent newline
+      sendMessage();
     }
   };
 
   return (
-    <div className="current-user-info flex p-4">
-      <input
-        type="text"
-        value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
-        placeholder="Type your message..."
-        className="flex-1 border border-gray-300 rounded p-2 mr-2"
+    <div className="flex items-center gap-3">
+      <textarea
+        value={message}
+        placeholder="Type a message..."
+        rows={1}
+        onChange={(e) => {
+          setMessage(e.target.value);
+          handleTyping();
+        }}
+        onKeyDown={handleKeyDown}
+        className="flex-1 resize-none border rounded-lg p-3 focus:outline-none"
       />
+
+      {/* ✅ SEND BUTTON (VISIBLE) */}
       <button
-        onClick={handleSend}
-        className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition"
+        onClick={sendMessage}
+        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
       >
         Send
       </button>
     </div>
   );
-};
-
-export default MessageArea;
+}

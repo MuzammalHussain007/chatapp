@@ -3,12 +3,14 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
-import UserInfo from "@/componants/userInfo";
+import UserInfo from "@/componants/UserInfo";
 import MessageArea from "@/componants/message-area";
 import Emptycard from "@/componants/emptycard";
 import Topbar from "@/componants/topbar";
 import Message from "@/componants/Message";
 import { getSocket } from "@/lib/socket-client";
+import UserProfile from "@/componants/userprofile";
+
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -18,7 +20,10 @@ export default function DashboardPage() {
   const [AllUser, setAllUser] = useState([]);
   const [allMessage, setAllMessage] = useState([]);
   const [isProfileClicked, setIsProfileClicked] = useState(false);
-  const [currentUser, setCurrentUser] = useState("");
+  const [otherUser, setOtherUser] = useState("");
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [isTyping, setIsTyping] = useState(false);
+
 
 
   // Initialize socket
@@ -32,7 +37,15 @@ export default function DashboardPage() {
       const socket = await getSocket();
       socketRef.current = socket;
 
-      socket.emit("join", session.user._id);
+      socketRef.current.on("connect", () => {
+
+        socketRef.current.emit("join", session.user._id);
+      });
+
+      socketRef.current.on("online-users", (users) => {
+        console.log("🟢 ONLINE USERS FROM SERVER:", users);
+        setOnlineUsers(users);
+      });
 
       socket.on("receive-message", (data) => {
         console.log("Received message via socket:", data);
@@ -48,11 +61,38 @@ export default function DashboardPage() {
     return () => {
       if (socketRef.current) {
         socketRef.current.off("receive-message");
+        socketRef.current.off("online-users");
+        socketRef.current.off("connect");
+
       }
     };
   }, [session?.user?.name]);
 
-  
+
+  useEffect(() => {
+  if (!socketRef.current) return;
+
+  socketRef.current.on("typing", ({ fromUserId }) => {
+        console.log("👀 typing from:", fromUserId);
+    if (fromUserId === otherUser?._id) {
+      setIsTyping(true);
+    }
+  });
+
+  socketRef.current.on("stop-typing", ({ fromUserId }) => {
+    if (fromUserId === otherUser?._id) {
+      setIsTyping(false);
+    }
+  });
+
+  return () => {
+    socketRef.current.off("typing");
+    socketRef.current.off("stop-typing");
+  };
+}, [otherUser]);
+
+
+
   useEffect(() => {
     if (!session?.user?.name) return;
 
@@ -70,6 +110,11 @@ export default function DashboardPage() {
     fetchAllUsers();
   }, [session?.user?.name]);
 
+
+  const isUserOnline = (userId) => {
+    return onlineUsers.includes(userId);
+  };
+
   const handleListMessage = async (selectedUser) => {
     try {
       const res = await fetch(
@@ -85,9 +130,11 @@ export default function DashboardPage() {
 
   const handleProfileClick = (user) => {
     setIsProfileClicked(true);
-    setAllMessage([]); 
-    setCurrentUser(user);
+    setAllMessage([]);
+    setOtherUser(user);
     handleListMessage(user._id);
+
+    setIsTyping(false);
 
     socketRef.current?.emit("join-chat", {
       userId: session.user._id,
@@ -105,17 +152,26 @@ export default function DashboardPage() {
 
   return (
     <div className="h-screen bg-green-50 text-black overflow-hidden">
-      <Topbar name={session.user.name} srcURL={session.user.image} />
 
       <div className="flex h-[calc(100vh-34px)]">
-        <div className="leftside w-[30vw] bg-green-50 p-7 overflow-y-auto">
-          <div className="flex flex-col gap-3">
-            {AllUser.length === 0 && <div>No users found</div>}
+
+        <div className="leftside w-[30vw] bg-green-50 h-screen flex flex-col p-5">
+          <div className="mb-4">
+            <UserProfile
+              srcURL={session.user.image}
+              logedInUserId={session.user._id}
+              currentlyLoginUserName={session.user.name}
+              onClick={() => console.log("Clicked own profile")}
+            />
+          </div>
+
+          <div className="flex-1 overflow-y-auto flex flex-col gap-3">
             {AllUser.map((item) => (
               <UserInfo
                 key={item._id}
                 username={item.name}
                 imageSrc={item.picture}
+                isOnline={isUserOnline(item._id)}
                 onClick={() => handleProfileClick(item)}
               />
             ))}
@@ -123,6 +179,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="rightSide w-[70vw] bg-white h-screen flex flex-col">
+          <Topbar isTyping={isTyping} name={otherUser?.name} srcURL={otherUser?.picture || "/globe.svg"} profileClicked={isProfileClicked} isOnline={isUserOnline(otherUser?._id)} />
           {isProfileClicked ? (
             <>
               <div className="overflow-y-auto p-4 flex flex-col mb-20">
@@ -142,13 +199,14 @@ export default function DashboardPage() {
               </div>
               <div className="sticky bottom-0 bg-white border-t p-4">
                 <MessageArea
-                  toUser={currentUser._id}
+                  socketRef={socketRef}
+                  toUser={otherUser._id}
                   fromUser={session.user._id}
                   onMessageSent={(newMessage) => {
                     if (socketRef.current) {
                       socketRef.current.emit("send-message", {
                         fromUserId: session.user._id,
-                        toUserId: currentUser._id,
+                        toUserId: otherUser._id,
                         message: newMessage,
                       });
                     }
