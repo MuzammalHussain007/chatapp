@@ -15,14 +15,16 @@ export const getRoomId = (id1, id2) => {
 };
 
 
+const onlineUsers = new Map();
+const lastSeenUsers = new Map();
+
 export default function handler(req, res) {
   if (res.socket.server.io) {
     res.end();
     return;
   }
 
-  const onlineUsers = new Map();
-  const lastSeenUsers = new Map();
+
 
   console.log("🔌 Socket server starting");
 
@@ -33,6 +35,14 @@ export default function handler(req, res) {
 
   io.on("connection", (socket) => {
     console.log("✅ CONNECTED: server side ", socket.id);
+
+
+
+    socket.on("get-last-seen", (userId, callback) => {
+      console.log("Server received get-last-seen for:", userId);
+      const lastSeen = lastSeenUsers.get(userId) || null;
+      callback(lastSeen);
+    });
 
 
     // TYPING START
@@ -90,26 +100,60 @@ export default function handler(req, res) {
       });
     });
 
+
+
+    // socket.on("disconnect", (reason) => {
+
+    //   for (const [userId, id] of onlineUsers.entries()) {
+    //     if (id === socket.id) {
+    //       onlineUsers.delete(userId);
+    //       socket.broadcast.emit("user-offline", userId);
+    //       lastSeenUsers.set(userId, new Date().toISOString());
+    //       console.log(`User ${userId} disconnected. Last seen saved.${lastSeenUsers.size}`);
+    //       console.log(`🔴 User ${userId} disconnected`);
+    //     }
+    //   }
+
+    //   console.log("🔴 DISCONNECT:", socket.id);
+    //   io.emit("online-users", [...onlineUsers.keys()]);
+
+    //   console.log("❌ DISCONNECTED:", socket.id, reason);
+    // });
+
+
+
     socket.on("disconnect", (reason) => {
+  const userId = socket.userId; // directly from socket
 
-      for (const [userId, id] of onlineUsers.entries()) {
-        if (id === socket.id) {
-          onlineUsers.delete(userId);
-          lastSeenUsers.set(userId, new Date().toISOString());
-          console.log(`User ${userId} disconnected. Last seen saved.`);
-          console.log(`🔴 User ${userId} disconnected`);
-        }
-      }
-      console.log("🔴 DISCONNECT:", socket.id);
-      io.emit("online-users", [...onlineUsers.keys()]);
+  if (!userId) return; // if join was never called
 
-      socket.on("get-last-seen", (userId, callback) => {
-        console.log("Server received get-last-seen for:", userId);
-        callback(lastSeenUsers.get(userId) || null);
-      });
+  // Remove from online users
+  onlineUsers.delete(userId);
 
-      console.log("❌ DISCONNECTED:", socket.id, reason);
-    });
+  // Save last seen
+  lastSeenUsers.set(userId, new Date().toISOString());
+
+  // Notify others
+  socket.broadcast.emit("user-offline", userId);
+
+  // Debug logs
+  console.log("Map entries:", [...lastSeenUsers.entries()]);
+  console.log(`User ${userId} disconnected. Last seen saved. Map size: ${lastSeenUsers.size}`);
+  console.log("🔴 User disconnected:", userId);
+  console.log("❌ DISCONNECT:", socket.id, reason);
+
+  // Emit updated online users list
+  io.emit("online-users", [...onlineUsers.keys()]);
+});
+
+
+
+
+
+
+
+
+
   });
 
   res.socket.server.io = io;

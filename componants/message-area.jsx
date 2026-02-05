@@ -41,6 +41,7 @@ export default function MessageArea({
       "toUser": toUser,
       "fromUser": fromUser,
       "message": {
+        "messageId": Date.now().toString(),
         "sender": fromUser,
         "text": message
       }
@@ -54,22 +55,24 @@ export default function MessageArea({
     };
 
     fetch("http://localhost:3000/api/message", requestOptions)
-      .then((response) => response.text())
-      .then((result) => console.log(result))
+      .then((response) => response.json())
+      .then((result) => {
+        console.log("Message sent successfully:", result);
+
+        onMessageSent(result.data);
+
+        socketRef.current?.emit("stop-typing", {
+          fromUserId: fromUser,
+          toUserId: toUser,
+        });
+
+
+        setMessage("");
+
+
+      })
       .catch((error) => console.error(error));
 
-    onMessageSent({
-      sender: fromUser,
-      text: message,
-      createdAt: new Date().toISOString(),
-    });
-
-    socketRef.current?.emit("stop-typing", {
-      fromUserId: fromUser,
-      toUserId: toUser,
-    });
-
-    setMessage("");
   };
 
   // 🔹 Handle Enter key

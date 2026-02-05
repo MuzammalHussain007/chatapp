@@ -20,10 +20,10 @@ export default function DashboardPage() {
   const [AllUser, setAllUser] = useState([]);
   const [allMessage, setAllMessage] = useState([]);
   const [isProfileClicked, setIsProfileClicked] = useState(false);
-  const [otherUser, setOtherUser] = useState("");
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const otherUserRef = useRef(null); 
   const [socket, setsocket] = useState(null)
 
 
@@ -53,6 +53,8 @@ export default function DashboardPage() {
         console.log("Received message via socket:", data);
 
         if (data && data.message) {
+          console.log("Received message via socket: insde if", data.message);
+          let newText = data.message;
           setAllMessage((prev) => [...prev, data.message]);
         }
       });
@@ -76,13 +78,13 @@ export default function DashboardPage() {
 
     socketRef.current.on("typing", ({ fromUserId }) => {
       console.log("👀 typing from:", fromUserId);
-      if (fromUserId === otherUser?._id) {
+      if (fromUserId === otherUserRef.current._id) {
         setIsTyping(true);
       }
     });
 
     socketRef.current.on("stop-typing", ({ fromUserId }) => {
-      if (fromUserId === otherUser?._id) {
+      if (fromUserId === otherUserRef.current._id) {
         setIsTyping(false);
       }
     });
@@ -91,7 +93,7 @@ export default function DashboardPage() {
       socketRef.current.off("typing");
       socketRef.current.off("stop-typing");
     };
-  }, [otherUser]);
+  }, [otherUserRef.current?._id]);
 
 
 
@@ -140,8 +142,12 @@ export default function DashboardPage() {
   const handleProfileClick = (user) => {
     setIsProfileClicked(true);
     setAllMessage([]);
-    setOtherUser(user);
     handleListMessage(user._id);
+    otherUserRef.current = user;
+     console.log("user from arg ",user)
+    console.log("other user useRef",otherUserRef.current._id)
+
+
 
     setIsTyping(false);
 
@@ -188,7 +194,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="rightSide w-[70vw] bg-white h-screen flex flex-col">
-          <Topbar socketRef={socket} otherUserId={otherUser?._id} isTyping={isTyping} name={otherUser?.name} srcURL={otherUser?.picture || "/globe.svg"} profileClicked={isProfileClicked} isOnline={isUserOnline(otherUser?._id)} />
+           <Topbar otherUserId={otherUserRef.current?._id} isTyping={isTyping} name={otherUserRef.current?.name} srcURL={otherUserRef.current?.picture || "/globe.svg"} profileClicked={isProfileClicked} isOnline={isUserOnline(otherUserRef.current?._id)} />
           {isProfileClicked ? (
             <>
               <div className="overflow-y-auto pb-14 pl-5 pr-5 flex flex-col" ref={messagesEndRef}>
@@ -209,14 +215,18 @@ export default function DashboardPage() {
               <div className="sticky bottom-0 border-t p-4 mt-auto bg-white">
                 <MessageArea
                   socketRef={socketRef}
-                  toUser={otherUser._id}
+                  toUser={otherUserRef.current?._id}
                   fromUser={session.user._id}
-                  onMessageSent={(newMessage) => {
+                  onMessageSent={(response) => {
+
+                    console.log("dashboard screen",response)
                     if (socketRef.current) {
+                      
+        
                       socketRef.current.emit("send-message", {
                         fromUserId: session.user._id,
-                        toUserId: otherUser._id,
-                        message: newMessage,
+                        toUserId: otherUserRef.current?._id,
+                        message: response,
                       });
                     }
                   }}
