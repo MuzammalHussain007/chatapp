@@ -59,7 +59,7 @@ export default function MessageArea({
       .then((result) => {
         console.log("Message sent successfully:", result);
 
-        onMessageSent(result.data);
+        onMessageSent(result.data); // Pass the full saved document back to parent
 
         socketRef.current?.emit("stop-typing", {
           fromUserId: fromUser,
@@ -71,7 +71,9 @@ export default function MessageArea({
 
 
       })
-      .catch((error) => console.error(error));
+      .catch((error) => {
+        console.error("Error sending message:", error);
+      });
 
   };
 

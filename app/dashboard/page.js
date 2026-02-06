@@ -23,7 +23,7 @@ export default function DashboardPage() {
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
-  const otherUserRef = useRef(null); 
+  const otherUserRef = useRef(null);
   const [socket, setsocket] = useState(null)
 
 
@@ -54,10 +54,25 @@ export default function DashboardPage() {
 
         if (data && data.message) {
           console.log("Received message via socket: insde if", data.message);
-          let newText = data.message;
           setAllMessage((prev) => [...prev, data.message]);
         }
       });
+
+
+      console.log("Start seeing functionality in socket");
+
+      socket.on("message-seen", ({ messageId,currentChatId }) => {
+        console.log("i got it message seen", messageId);
+        setAllMessage(prev =>
+          prev.map(m => (m.messageId === messageId ? { ...m, status: "Seen" } : m))
+        );
+
+        console.log("chat id==>",currentChatId)
+        updateStatusAPI(currentChatId, messageId, "Seen")
+
+      });
+
+      
     };
 
     setupSocket();
@@ -71,6 +86,29 @@ export default function DashboardPage() {
       }
     };
   }, [session?.user?.name]);
+
+
+  useEffect(() => {
+    if (!otherUserRef.current) return;
+
+    const unseenMessages = allMessage.filter(
+      m => m.fromUserId === otherUserRef.current._id && m.status !== "Seen"
+    );
+
+    unseenMessages.forEach(m =>
+      socketRef.current.emit("mark-seen", {
+        messageId: m.id,
+        fromUserId: otherUserRef.current._id,
+        toUserId: session.user._id,
+      })
+    );
+
+    setAllMessage(prev =>
+      prev.map(m =>
+        m.fromUserId === otherUserRef.current._id ? { ...m, status: "Seen" } : m
+      )
+    );
+  }, [otherUserRef.current]);
 
 
   useEffect(() => {
@@ -122,6 +160,42 @@ export default function DashboardPage() {
     }
   }, [allMessage]);
 
+
+  useEffect(() => {
+    if (!otherUserRef.current) return;
+
+    socketRef.current.onAny((event, ...args) => {
+      console.log("🔥 EVENT RECEIVED:", event, args);
+    });
+
+
+    return () => {
+      socketRef.current.emit("close-chat", { userId: session.user._id });
+    };
+  }, []);
+
+
+
+
+
+  async function updateStatusAPI(chatId, messageId, status) {
+    try {
+      await fetch("http://localhost:3000/api/update-message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ chatId, messageId, status }),
+      });
+    } catch (err) {
+      console.error("Status API error:", err);
+    }
+  }
+
+
+
+
+
   const isUserOnline = (userId) => {
     return onlineUsers.includes(userId);
   };
@@ -140,21 +214,42 @@ export default function DashboardPage() {
   };
 
   const handleProfileClick = (user) => {
+
+
+
+
+
+
+
+
+
+
+
     setIsProfileClicked(true);
     setAllMessage([]);
     handleListMessage(user._id);
     otherUserRef.current = user;
-     console.log("user from arg ",user)
-    console.log("other user useRef",otherUserRef.current._id)
-
-
-
+    console.log("user from arg ", user)
+    console.log("other user useRef", otherUserRef.current._id)
     setIsTyping(false);
+
+
+
+    socketRef.current?.emit("test-event", "Hello chal ja bosri kay");
+
 
     socketRef.current?.emit("join-chat", {
       userId: session.user._id,
       otherUserId: user._id,
     });
+
+
+    socketRef.current?.emit("open-chat", {
+      fromUserId: session.user._id,
+      toUserId: user._id,
+    });
+
+
 
   };
 
@@ -194,7 +289,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="rightSide w-[70vw] bg-white h-screen flex flex-col">
-           <Topbar otherUserId={otherUserRef.current?._id} isTyping={isTyping} name={otherUserRef.current?.name} srcURL={otherUserRef.current?.picture || "/globe.svg"} profileClicked={isProfileClicked} isOnline={isUserOnline(otherUserRef.current?._id)} />
+          <Topbar otherUserId={otherUserRef.current?._id} isTyping={isTyping} name={otherUserRef.current?.name} srcURL={otherUserRef.current?.picture || "/globe.svg"} profileClicked={isProfileClicked} isOnline={isUserOnline(otherUserRef.current?._id)} />
           {isProfileClicked ? (
             <>
               <div className="overflow-y-auto pb-14 pl-5 pr-5 flex flex-col" ref={messagesEndRef}>
@@ -203,6 +298,7 @@ export default function DashboardPage() {
                     key={index}
                     text={item.text}
                     sender={item.name}
+                    status={item.status}
                     isOwnMessage={item.sender === session.user._id}
                     timestamp={new Date(item.createdAt).toLocaleTimeString("en-US", {
                       hour: "numeric",
@@ -219,15 +315,27 @@ export default function DashboardPage() {
                   fromUser={session.user._id}
                   onMessageSent={(response) => {
 
-                    console.log("dashboard screen",response)
+                    console.log("dashboard screen", response)
+
+                    const chatId = response._id;
+
+                    const lastMessage =
+                      response.message?.[response.message.length - 1];
+
+
+                       console.log("dashboard screen chat id ", chatId)
+
+
                     if (socketRef.current) {
-                      
-        
                       socketRef.current.emit("send-message", {
                         fromUserId: session.user._id,
                         toUserId: otherUserRef.current?._id,
-                        message: response,
+                        message: lastMessage,
+                        currentChatId: chatId,
                       });
+
+                      console.log("message id ", lastMessage.messageId)
+                      updateStatusAPI(chatId, lastMessage.messageId, "Delivered");
                     }
                   }}
                 />

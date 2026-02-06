@@ -21,10 +21,11 @@ export async function POST(req) {
     sender: message.sender,
     text: message.text,
     messageId: uuidv4(),
+    status: "Sent",
     createdAt : new Date().toISOString(),
   };
 
-  const result = await collection.updateOne(
+  const result = await collection.findOneAndUpdate(
     { participants },
     {
       $setOnInsert: { participants },
@@ -40,7 +41,7 @@ export async function POST(req) {
     {
       success: true,
       message: "Message saved",
-      data: newMessage, // full saved document
+      data: result, // full saved document
     },
     { status: 201 }
   );

@@ -17,6 +17,7 @@ export const getRoomId = (id1, id2) => {
 
 const onlineUsers = new Map();
 const lastSeenUsers = new Map();
+const openChats = new Map();
 
 export default function handler(req, res) {
   if (res.socket.server.io) {
@@ -35,6 +36,28 @@ export default function handler(req, res) {
 
   io.on("connection", (socket) => {
     console.log("✅ CONNECTED: server side ", socket.id);
+
+
+    socket.onAny((event, ...args) => {
+      console.log("🔥 EVENT RECEIVED ON SERVER:", event, args);
+    });
+
+
+
+    socket.on("test-event", (data) => {
+      console.log("💥 TEST EVENT RECEIVED:", data);
+    });
+
+
+
+    socket.on("open-chat", ({ fromUserId, toUserId }) => {
+      console.log("💬 OPEN CHAT:", fromUserId, "->", toUserId);
+      openChats.set(fromUserId, toUserId);
+    });
+
+    socket.on("close-chat", ({ fromUserId }) => {
+      openChats.delete(fromUserId);
+    });
 
 
 
@@ -89,62 +112,59 @@ export default function handler(req, res) {
     });
 
 
-
-    socket.on("send-message", ({ fromUserId, toUserId, message }) => {
+    socket.on("send-message", ({ fromUserId, toUserId, message , currentChatId }) => {
       const roomId = [fromUserId, toUserId].sort().join("-");
       console.log(`📤 Message from ${fromUserId} to room ${roomId}:`, message);
 
-      io.to(roomId).emit("receive-message", {
-        fromUserId,
-        message,
-      });
+      io.to(roomId).emit("receive-message", { fromUserId, message });
+
+      // Check if receiver has chat open for this sender
+      if (openChats.get(toUserId) === fromUserId) {
+        console.log("chat id for given chat",currentChatId)
+        console.log("👀 Receiver has chat open, marking as seen:", message.messageId);
+        io.to(roomId).emit("message-seen", { messageId: message.messageId, currentChatId });
+      }
+    });
+
+
+    socket.on("mark-seen", ({ messageId, fromUserId }) => {
+      const senderSocketId = onlineUsers.get(fromUserId);
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("message-seen", { messageId });
+      }
     });
 
 
 
-    // socket.on("disconnect", (reason) => {
 
-    //   for (const [userId, id] of onlineUsers.entries()) {
-    //     if (id === socket.id) {
-    //       onlineUsers.delete(userId);
-    //       socket.broadcast.emit("user-offline", userId);
-    //       lastSeenUsers.set(userId, new Date().toISOString());
-    //       console.log(`User ${userId} disconnected. Last seen saved.${lastSeenUsers.size}`);
-    //       console.log(`🔴 User ${userId} disconnected`);
-    //     }
-    //   }
 
-    //   console.log("🔴 DISCONNECT:", socket.id);
-    //   io.emit("online-users", [...onlineUsers.keys()]);
 
-    //   console.log("❌ DISCONNECTED:", socket.id, reason);
-    // });
 
 
 
     socket.on("disconnect", (reason) => {
-  const userId = socket.userId; // directly from socket
+      const userId = socket.userId; // directly from socket
 
-  if (!userId) return; // if join was never called
+      if (!userId) return; // if join was never called
 
-  // Remove from online users
-  onlineUsers.delete(userId);
+      // Remove from online users
+      onlineUsers.delete(userId);
 
-  // Save last seen
-  lastSeenUsers.set(userId, new Date().toISOString());
+      // Save last seen
+      lastSeenUsers.set(userId, new Date().toISOString());
 
-  // Notify others
-  socket.broadcast.emit("user-offline", userId);
+      // Notify others
+      socket.broadcast.emit("user-offline", userId);
 
-  // Debug logs
-  console.log("Map entries:", [...lastSeenUsers.entries()]);
-  console.log(`User ${userId} disconnected. Last seen saved. Map size: ${lastSeenUsers.size}`);
-  console.log("🔴 User disconnected:", userId);
-  console.log("❌ DISCONNECT:", socket.id, reason);
+      // Debug logs
+      console.log("Map entries:", [...lastSeenUsers.entries()]);
+      console.log(`User ${userId} disconnected. Last seen saved. Map size: ${lastSeenUsers.size}`);
+      console.log("🔴 User disconnected:", userId);
+      console.log("❌ DISCONNECT:", socket.id, reason);
 
-  // Emit updated online users list
-  io.emit("online-users", [...onlineUsers.keys()]);
-});
+      // Emit updated online users list
+      io.emit("online-users", [...onlineUsers.keys()]);
+    });
 
 
 
