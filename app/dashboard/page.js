@@ -26,6 +26,8 @@ export default function DashboardPage() {
   const otherUserRef = useRef(null);
   const [socket, setsocket] = useState(null)
 
+  let chatdoc=null;
+
 
   // Initialize socket
   const socketRef = useRef(null);
@@ -61,18 +63,18 @@ export default function DashboardPage() {
 
       console.log("Start seeing functionality in socket");
 
-      socket.on("message-seen", ({ messageId,currentChatId }) => {
+      socket.on("message-seen", ({ messageId, currentChatId }) => {
         console.log("i got it message seen", messageId);
         setAllMessage(prev =>
           prev.map(m => (m.messageId === messageId ? { ...m, status: "Seen" } : m))
         );
 
-        console.log("chat id==>",currentChatId)
+        console.log("chat id==>", currentChatId)
         updateStatusAPI(currentChatId, messageId, "Seen")
 
       });
 
-      
+
     };
 
     setupSocket();
@@ -88,27 +90,7 @@ export default function DashboardPage() {
   }, [session?.user?.name]);
 
 
-  useEffect(() => {
-    if (!otherUserRef.current) return;
 
-    const unseenMessages = allMessage.filter(
-      m => m.fromUserId === otherUserRef.current._id && m.status !== "Seen"
-    );
-
-    unseenMessages.forEach(m =>
-      socketRef.current.emit("mark-seen", {
-        messageId: m.id,
-        fromUserId: otherUserRef.current._id,
-        toUserId: session.user._id,
-      })
-    );
-
-    setAllMessage(prev =>
-      prev.map(m =>
-        m.fromUserId === otherUserRef.current._id ? { ...m, status: "Seen" } : m
-      )
-    );
-  }, [otherUserRef.current]);
 
 
   useEffect(() => {
@@ -161,19 +143,6 @@ export default function DashboardPage() {
   }, [allMessage]);
 
 
-  useEffect(() => {
-    if (!otherUserRef.current) return;
-
-    socketRef.current.onAny((event, ...args) => {
-      console.log("🔥 EVENT RECEIVED:", event, args);
-    });
-
-
-    return () => {
-      socketRef.current.emit("close-chat", { userId: session.user._id });
-    };
-  }, []);
-
 
 
 
@@ -213,29 +182,9 @@ export default function DashboardPage() {
     }
   };
 
-  const handleProfileClick = (user) => {
 
-
-
-
-
-
-
-
-
-
-
-    setIsProfileClicked(true);
-    setAllMessage([]);
-    handleListMessage(user._id);
-    otherUserRef.current = user;
-    console.log("user from arg ", user)
-    console.log("other user useRef", otherUserRef.current._id)
-    setIsTyping(false);
-
-
-
-    socketRef.current?.emit("test-event", "Hello chal ja bosri kay");
+  const handlingSocketForChat = (user) => {
+    if (!socketRef.current) return;
 
 
     socketRef.current?.emit("join-chat", {
@@ -249,8 +198,54 @@ export default function DashboardPage() {
       toUserId: user._id,
     });
 
+    socketRef.current?.on("message-delivered", ({ messageId, currentChatId }) => {
+      console.log("message delivered event received for messageId:", messageId, "in chat:", currentChatId);
+      updateStatusAPI(currentChatId, messageId, "Delivered");
+      setAllMessage(prev =>
+        prev.map(m =>
+          m.messageId === messageId && m.status === "Sent" ? { ...m, status: "Delivered" } : m
+        )
+      );
+      updateStatusAPI(currentChatId, messageId, "Delivered");
+    })
+     
 
 
+    socketRef.current.on("chat-opened", ({ fromUserId }) => {
+      console.log("chat opened event received for user:", fromUserId);
+
+      const unseenMessages = allMessage.filter(
+        m => m.fromUserId === fromUserId && m.status !== "Seen"
+      );
+
+      if (unseenMessages.length === 0) return;
+
+      setAllMessage(prev =>
+        prev.map(m =>
+          m.fromUserId === fromUserId ? { ...m, status: "Seen" } : m
+        )
+      );
+
+
+      unseenMessages.forEach((m) => {
+        socketRef.current.emit("message-seen", { messageId: m.messageId, fromUserId , currentChatId: chatdoc._id});
+      });
+
+    })
+
+
+  }
+
+  const handleProfileClick = (user) => {
+    setIsProfileClicked(true);
+    setAllMessage([]);
+    handleListMessage(user._id);
+    otherUserRef.current = user;
+    console.log("user from arg ", user)
+    console.log("other user useRef", otherUserRef.current._id)
+    setIsTyping(false);
+
+    handlingSocketForChat(user);
   };
 
   useEffect(() => {
@@ -319,11 +314,13 @@ export default function DashboardPage() {
 
                     const chatId = response._id;
 
+                    chatdoc = response;
+
                     const lastMessage =
                       response.message?.[response.message.length - 1];
 
 
-                       console.log("dashboard screen chat id ", chatId)
+                    console.log("dashboard screen chat id ", chatId)
 
 
                     if (socketRef.current) {
