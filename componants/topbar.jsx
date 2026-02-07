@@ -46,6 +46,8 @@ const Topbar = ({
             setLastSeen(timestamp ? new Date(timestamp) : null);
           }
         );
+
+        console.log("last seen user",lastSeen)
       };
 
       socket.on("user-offline", handleUserOffline);

@@ -26,13 +26,13 @@ export default function DashboardPage() {
   const otherUserRef = useRef(null);
   const [socket, setsocket] = useState(null)
 
-  let chatdoc=null;
+  const chatdoc = useRef(null);
 
 
   // Initialize socket
   const socketRef = useRef(null);
   useEffect(() => {
-    if (!session?.user?.name) return;
+    if (!session?.user?._id) return;
 
     console.log("Setting up socket for user:", session.user._id);
 
@@ -87,7 +87,7 @@ export default function DashboardPage() {
 
       }
     };
-  }, [session?.user?.name]);
+  }, [session?.user?._id]);
 
 
 
@@ -118,7 +118,7 @@ export default function DashboardPage() {
 
 
   useEffect(() => {
-    if (!session?.user?.name) return;
+    if (!session?.user?._id) return;
 
     const fetchAllUsers = async () => {
       try {
@@ -132,7 +132,7 @@ export default function DashboardPage() {
     };
 
     fetchAllUsers();
-  }, [session?.user?.name]);
+  }, [session?.user?._id]);
 
 
   useEffect(() => {
@@ -208,30 +208,65 @@ export default function DashboardPage() {
       );
       updateStatusAPI(currentChatId, messageId, "Delivered");
     })
-     
 
 
-    socketRef.current.on("chat-opened", ({ fromUserId }) => {
-      console.log("chat opened event received for user:", fromUserId);
 
-      const unseenMessages = allMessage.filter(
-        m => m.fromUserId === fromUserId && m.status !== "Seen"
-      );
+    // socketRef.current.on("chat-opened", ({ fromUserId }) => {
+    //   console.log("chat opened event received for user:", fromUserId);
 
-      if (unseenMessages.length === 0) return;
+    //   const unseenMessages = allMessage.filter(
+    //     m => m.fromUserId === fromUserId && m.status !== "Seen"
+    //   );
 
-      setAllMessage(prev =>
-        prev.map(m =>
-          m.fromUserId === fromUserId ? { ...m, status: "Seen" } : m
-        )
-      );
+    //   if (unseenMessages.length === 0) return;
+
+    //   setAllMessage(prev =>
+    //     prev.map(m =>
+    //       m.fromUserId === fromUserId ? { ...m, status: "Seen" } : m
+    //     )
+    //   );
 
 
-      unseenMessages.forEach((m) => {
-        socketRef.current.emit("message-seen", { messageId: m.messageId, fromUserId , currentChatId: chatdoc._id});
+    //   unseenMessages.forEach((m) => {
+    //     socketRef.current.emit("message-seen", { messageId: m.messageId, fromUserId , currentChatId: chatdoc._id});
+    //   });
+
+    // })
+
+
+    socketRef.current.on("chat-opened", ({ toUserId }) => {
+
+      console.log("chat opened by:", toUserId);
+
+      setAllMessage(prev => {
+
+        const unseenMessages = prev.filter(
+          m => m.fromUserId === toUserId && m.status !== "Seen"
+        );
+
+        if (unseenMessages.length === 0) {
+
+          console.log("No unseen messages for user:", toUserId);
+          return prev;
+
+        }
+
+        unseenMessages.forEach(m => {
+          socketRef.current.emit("message-seen", {
+            messageId: m.messageId,
+            toUserId,
+            currentChatId: chatdoc.current._id
+          });
+        });
+
+        return prev.map(m =>
+          m.fromUserId === toUserId
+            ? { ...m, status: "Seen" }
+            : m
+        );
       });
 
-    })
+    });
 
 
   }
@@ -314,7 +349,7 @@ export default function DashboardPage() {
 
                     const chatId = response._id;
 
-                    chatdoc = response;
+                    chatdoc.current = response;
 
                     const lastMessage =
                       response.message?.[response.message.length - 1];

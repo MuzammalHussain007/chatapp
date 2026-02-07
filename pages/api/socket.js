@@ -106,7 +106,7 @@ export default function handler(req, res) {
     socket.on("join", (userId) => {
       console.log("🟢 JOIN RECEIVED:", userId);
       onlineUsers.set(userId, socket.id);
-      console.log("ONLINE USERS:", [...onlineUsers.keys()]);
+       console.log("ONLINE USERS:", [...onlineUsers.keys()]);
       io.emit("online-users", [...onlineUsers.keys()]);
     });
 
@@ -164,29 +164,25 @@ export default function handler(req, res) {
 
 
     socket.on("disconnect", (reason) => {
-      const userId = socket.userId; // directly from socket
+      const userId = socket.userId;  
 
-      if (!userId) return; // if join was never called
+      if (!userId) return;  
 
-      // Remove from online users
       onlineUsers.delete(userId);
+      openChats.delete(userId); 
 
-      // Save last seen
       lastSeenUsers.set(userId, new Date().toISOString());
 
-      // Notify others
       socket.broadcast.emit("user-offline", userId);
 
-      // Debug logs
       console.log("Map entries:", [...lastSeenUsers.entries()]);
       console.log(`User ${userId} disconnected. Last seen saved. Map size: ${lastSeenUsers.size}`);
       console.log("🔴 User disconnected:", userId);
       console.log("❌ DISCONNECT:", socket.id, reason);
 
-      // Emit updated online users list
       io.emit("online-users", [...onlineUsers.keys()]);
     });
-    
+
   });
 
   res.socket.server.io = io;
