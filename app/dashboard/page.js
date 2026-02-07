@@ -25,8 +25,9 @@ export default function DashboardPage() {
   const messagesEndRef = useRef(null);
   const otherUserRef = useRef(null);
   const [socket, setsocket] = useState(null)
-
   const chatdoc = useRef(null);
+  const [unseenCountMap, setUnseenCountMap] = useState({});
+
 
 
   // Initialize socket
@@ -58,7 +59,21 @@ export default function DashboardPage() {
           console.log("Received message via socket: insde if", data.message);
           setAllMessage((prev) => [...prev, data.message]);
         }
+
+        const senderId = data.message.sender;
+
+        // Only increment badge if the receiver is NOT currently viewing this chat
+        if (otherUserRef.current?._id !== senderId) {
+          console.log("Incrementing unseen count for sender:", senderId);
+          setUnseenCountMap(prev => ({
+            ...prev,
+            [senderId]: (prev[senderId] || 0) + 1
+          }));
+        }
+
       });
+
+
 
 
       console.log("Start seeing functionality in socket");
@@ -206,33 +221,9 @@ export default function DashboardPage() {
           m.messageId === messageId && m.status === "Sent" ? { ...m, status: "Delivered" } : m
         )
       );
-      updateStatusAPI(currentChatId, messageId, "Delivered");
+
+
     })
-
-
-
-    // socketRef.current.on("chat-opened", ({ fromUserId }) => {
-    //   console.log("chat opened event received for user:", fromUserId);
-
-    //   const unseenMessages = allMessage.filter(
-    //     m => m.fromUserId === fromUserId && m.status !== "Seen"
-    //   );
-
-    //   if (unseenMessages.length === 0) return;
-
-    //   setAllMessage(prev =>
-    //     prev.map(m =>
-    //       m.fromUserId === fromUserId ? { ...m, status: "Seen" } : m
-    //     )
-    //   );
-
-
-    //   unseenMessages.forEach((m) => {
-    //     socketRef.current.emit("message-seen", { messageId: m.messageId, fromUserId , currentChatId: chatdoc._id});
-    //   });
-
-    // })
-
 
     socketRef.current.on("chat-opened", ({ toUserId }) => {
 
@@ -280,6 +271,13 @@ export default function DashboardPage() {
     console.log("other user useRef", otherUserRef.current._id)
     setIsTyping(false);
 
+
+    setUnseenCountMap(prev => {
+      const newMap = { ...prev };
+      delete newMap[user._id];
+      return newMap;
+    });
+
     handlingSocketForChat(user);
   };
 
@@ -311,6 +309,7 @@ export default function DashboardPage() {
                 key={item._id}
                 username={item.name}
                 imageSrc={item.picture}
+                deliveredCount={unseenCountMap[item._id] || 0}
                 isOnline={isUserOnline(item._id)}
                 onClick={() => handleProfileClick(item)}
               />

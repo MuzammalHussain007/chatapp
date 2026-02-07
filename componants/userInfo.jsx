@@ -1,7 +1,7 @@
 // components/UserInfo.js
 import Image from "next/image";
 
-const UserInfo = ({ username, imageSrc, onClick, isOnline }) => {
+const UserInfo = ({ username, imageSrc, onClick, isOnline, deliveredCount }) => {
   return (
     <div
       onClick={onClick}
@@ -45,6 +45,13 @@ const UserInfo = ({ username, imageSrc, onClick, isOnline }) => {
       >
         {isOnline ? "Online" : "Offline"}
       </span>
+
+      {/* Unseen / delivered count badge - top right of card */}
+      {deliveredCount > 0 && (
+        <div className="absolute top-1 right-1 bg-green-100 text-black text-xs font-bold px-2 py-0.5 rounded-full">
+          {deliveredCount}
+        </div>
+      )}
     </div>
   );
 };

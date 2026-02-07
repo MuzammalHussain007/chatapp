@@ -125,6 +125,7 @@ export default function handler(req, res) {
       console.log(`📤 Message from ${fromUserId} to room ${roomId}:`, message);
 
       io.to(roomId).emit("receive-message", { fromUserId, message });
+      
 
       // Check if receiver has chat open for this sender
       if (openChats.get(toUserId) === fromUserId) {

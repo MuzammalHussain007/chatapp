@@ -25,17 +25,44 @@ export async function POST(req) {
     createdAt : new Date().toISOString(),
   };
 
-  const result = await collection.findOneAndUpdate(
-    { participants },
+ const result = await collection.findOneAndUpdate(
+  { participants },
+  [
     {
-      $setOnInsert: { participants },
-      $push: { message: newMessage },
+      $set: {
+        participants,
+        unseenCount: {
+          $ifNull: ["$unseenCount", {}]
+        }
+      }
     },
     {
-      upsert: true,
-      returnDocument: "after",
+      $set: {
+        [`unseenCount.${toUser}`]: {
+          $add: [
+            { $ifNull: [`$unseenCount.${toUser}`, 0] },
+            1
+          ]
+        }
+      }
+    },
+    {
+      $set: {
+        message: {
+          $concatArrays: [
+            { $ifNull: ["$message", []] },
+            [newMessage]
+          ]
+        }
+      }
     }
-  );
+  ],
+  {
+    upsert: true,
+    returnDocument: "after"
+  }
+);
+
 
   return Response.json(
     {
