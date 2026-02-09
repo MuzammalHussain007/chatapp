@@ -25,7 +25,7 @@ export default function DashboardPage() {
   const messagesEndRef = useRef(null);
   const otherUserRef = useRef(null);
   const [socket, setsocket] = useState(null)
-  const chatdoc = useRef(null);
+  let chatId = null;
 
   const [unseenCountMap, setUnseenCountMap] = useState({});
   // Initialize socket
@@ -70,7 +70,6 @@ export default function DashboardPage() {
 
         const senderId = data.message.sender;
 
-        // Only increment badge if the receiver is NOT currently viewing this chat
         if (otherUserRef.current?._id !== senderId) {
           console.log("Incrementing unseen count for sender:", senderId);
           setUnseenCountMap(prev => ({
@@ -202,8 +201,14 @@ export default function DashboardPage() {
         `/api/chats?user1=${session.user._id}&user2=${selectedUser}`
       );
       const data = await res.json();
-      const msgs = data?.data?.message || [];
+
+      console.log("Fetched messages:", data);
+      const msgs = Array.isArray(data?.data?.messages) ? data.data.messages : [];
+
       setAllMessage([...msgs].reverse());
+
+      chatId = data?.data?._id;
+
     } catch (error) {
       console.error("Fetch message error:", error);
     }
@@ -261,7 +266,7 @@ export default function DashboardPage() {
           socketRef.current.emit("message-seen", {
             messageId: m.messageId,
             toUserId,
-            currentChatId: chatdoc.current._id
+            currentChatId: chatId
           });
         });
 
@@ -352,6 +357,9 @@ export default function DashboardPage() {
                     })}
                   />
                 ))}
+
+                  {isTyping && <Message isTyping={true} isOwnMessage={false} sender={otherUserRef.current?.name} />}
+
               </div>
               <div className="sticky bottom-0 border-t p-4 mt-auto bg-white">
                 <MessageArea
@@ -363,9 +371,6 @@ export default function DashboardPage() {
                     console.log("dashboard screen", response)
 
                     const chatId = response._id;
-
-                    chatdoc.current = response;
-
                     const lastMessage =
                       response.message?.[response.message.length - 1];
 
