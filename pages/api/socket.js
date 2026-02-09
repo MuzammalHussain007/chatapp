@@ -44,7 +44,7 @@ export default function handler(req, res) {
 
 
 
-   
+
 
 
 
@@ -53,7 +53,7 @@ export default function handler(req, res) {
       const prevChat = openChats.get(fromUserId);
       if (prevChat && prevChat !== toUserId) {
         console.log(`${fromUserId} switched from chat with ${prevChat} to ${toUserId}`);
-        openChats.delete(fromUserId); 
+        openChats.delete(fromUserId);
       }
       openChats.set(fromUserId, toUserId);
       const receiverSocketId = onlineUsers.get(toUserId);
@@ -104,9 +104,11 @@ export default function handler(req, res) {
 
 
     socket.on("join", (userId) => {
+      socket.userId = userId; // Associate userId with this socket
+
       console.log("🟢 JOIN RECEIVED:", userId);
       onlineUsers.set(userId, socket.id);
-       console.log("ONLINE USERS:", [...onlineUsers.keys()]);
+      console.log("ONLINE USERS:", [...onlineUsers.keys()]);
       io.emit("online-users", [...onlineUsers.keys()]);
     });
 
@@ -124,8 +126,8 @@ export default function handler(req, res) {
       const roomId = [fromUserId, toUserId].sort().join("-");
       console.log(`📤 Message from ${fromUserId} to room ${roomId}:`, message);
 
-      io.to(roomId).emit("receive-message", { fromUserId, message });
-      
+      io.to(roomId).emit("receive-message", { fromUserId, message, currentChatId });
+
 
       // Check if receiver has chat open for this sender
       if (openChats.get(toUserId) === fromUserId) {
@@ -170,7 +172,7 @@ export default function handler(req, res) {
       if (!userId) return;  
 
       onlineUsers.delete(userId);
-      openChats.delete(userId); 
+      openChats.delete(userId); // clear open chats on disconnect
 
       lastSeenUsers.set(userId, new Date().toISOString());
 
@@ -183,6 +185,11 @@ export default function handler(req, res) {
 
       io.emit("online-users", [...onlineUsers.keys()]);
     });
+
+
+ 
+
+
 
   });
 

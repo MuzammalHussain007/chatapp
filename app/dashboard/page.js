@@ -26,12 +26,20 @@ export default function DashboardPage() {
   const otherUserRef = useRef(null);
   const [socket, setsocket] = useState(null)
   const chatdoc = useRef(null);
+
   const [unseenCountMap, setUnseenCountMap] = useState({});
-
-
-
   // Initialize socket
   const socketRef = useRef(null);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollTo({
+        top: messagesEndRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [allMessage]);
+
   useEffect(() => {
     if (!session?.user?._id) return;
 
@@ -53,7 +61,7 @@ export default function DashboardPage() {
       });
 
       socket.on("receive-message", (data) => {
-        console.log("Received message via socket:", data);
+        console.log("Received message via socket:", data,);
 
         if (data && data.message) {
           console.log("Received message via socket: insde if", data.message);
@@ -70,7 +78,6 @@ export default function DashboardPage() {
             [senderId]: (prev[senderId] || 0) + 1
           }));
         }
-
       });
 
 
@@ -113,13 +120,13 @@ export default function DashboardPage() {
 
     socketRef.current.on("typing", ({ fromUserId }) => {
       console.log("👀 typing from:", fromUserId);
-      if (fromUserId === otherUserRef.current._id) {
+      if (fromUserId === otherUserRef?.current?._id) {
         setIsTyping(true);
       }
     });
 
     socketRef.current.on("stop-typing", ({ fromUserId }) => {
-      if (fromUserId === otherUserRef.current._id) {
+      if (fromUserId === otherUserRef?.current?._id) {
         setIsTyping(false);
       }
     });
@@ -150,16 +157,21 @@ export default function DashboardPage() {
   }, [session?.user?._id]);
 
 
-  useEffect(() => {
-    const container = messagesEndRef.current;
-    if (container) {
-      container.scrollTop = container.scrollHeight; // scroll to bottom
-    }
-  }, [allMessage]);
 
 
+  async function handleUnSeenCount(userId) {
+    const requestOptions = {
+      method: "GET",
+      redirect: "follow"
+    };
 
-
+    fetch(`http://localhost:3000/api/unseenCount?userId=${userId}`, requestOptions)
+      .then((response) => response.text())
+      .then((result) => {
+        console.log(result)
+      })
+      .catch((error) => console.error(error));
+  }
 
 
   async function updateStatusAPI(chatId, messageId, status) {
@@ -201,6 +213,10 @@ export default function DashboardPage() {
   const handlingSocketForChat = (user) => {
     if (!socketRef.current) return;
 
+    socketRef.current.emit("close-chat", {
+      fromUser: session.user._id,
+    });
+
 
     socketRef.current?.emit("join-chat", {
       userId: session.user._id,
@@ -221,9 +237,8 @@ export default function DashboardPage() {
           m.messageId === messageId && m.status === "Sent" ? { ...m, status: "Delivered" } : m
         )
       );
-
-
     })
+
 
     socketRef.current.on("chat-opened", ({ toUserId }) => {
 
@@ -258,7 +273,6 @@ export default function DashboardPage() {
       });
 
     });
-
 
   }
 
@@ -316,6 +330,8 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+
+
 
         <div className="rightSide w-[70vw] bg-white h-screen flex flex-col">
           <Topbar otherUserId={otherUserRef.current?._id} isTyping={isTyping} name={otherUserRef.current?.name} srcURL={otherUserRef.current?.picture || "/globe.svg"} profileClicked={isProfileClicked} isOnline={isUserOnline(otherUserRef.current?._id)} />

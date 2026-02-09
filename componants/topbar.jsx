@@ -14,12 +14,10 @@ const Topbar = ({
   const [isOnlineState, setIsOnlineState] = useState(null);
   const [lastSeen, setLastSeen] = useState(null);
 
-  // Sync online state coming from parent
   useEffect(() => {
     setIsOnlineState(isOnline);
   }, [isOnline]);
 
-  // Socket logic
   useEffect(() => {
     let socket;
 
@@ -30,15 +28,10 @@ const Topbar = ({
 
       console.log("Topbar socket connected:", socket.id);
 
-      // ---- USER OFFLINE EVENT ----
-      const handleUserOffline = (userId) => {
-        console.log("user-offline received:", userId);
-
-        if (userId !== otherUserId) return;
-
-        setIsOnlineState(false);
-
-        socket.emit(
+    
+      socket.on("user-offline", (otherUserId)=>{
+        console.log("user-offline received:", otherUserId);
+          socket.emit(
           "get-last-seen",
           otherUserId,
           (timestamp) => {
@@ -47,15 +40,11 @@ const Topbar = ({
           }
         );
 
-        console.log("last seen user",lastSeen)
-      };
-
-      socket.on("user-offline", handleUserOffline);
+      });
     };
 
     init();
 
-    // cleanup
     return () => {
       if (socket) {
         socket.off("user-offline");
@@ -63,20 +52,24 @@ const Topbar = ({
     };
   }, [otherUserId]);
 
-  // ---------- FORMAT LAST SEEN ----------
   const formatLastSeen = (date) => {
-    if (!date) return "Offline";
+  if (!date) return "Offline";
 
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
 
-    const hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, "0");
+  let hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
 
-    return isToday
-      ? `Last seen today at ${hours}:${minutes}`
-      : `Last seen on ${date.toLocaleDateString()} at ${hours}:${minutes}`;
-  };
+  hours = hours % 12;
+  hours = hours === 0 ? 12 : hours; // handle 12 AM / 12 PM
+
+  return isToday
+    ? `Last seen today at ${hours}:${minutes} ${ampm}`
+    : `Last seen on ${date.toLocaleDateString()} at ${hours}:${minutes} ${ampm}`;
+};
+
 
   return (
     <div className="w-full p-4 h-20 flex bg-green-50 items-center justify-between">
