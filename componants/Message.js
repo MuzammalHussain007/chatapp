@@ -18,7 +18,9 @@ const Message = ({
   timestamp,
   status,
   isTyping = false,
-  reactions = [] // future use
+  reactions = [],
+  type = "text",       // new prop: "text" | "image" | "file"
+  attachment = null,   // new prop: URL for image/file
 }) => {
   return (
     <div
@@ -36,7 +38,7 @@ const Message = ({
               : "bg-gray-100 text-gray-800 rounded-bl-none"
           }`}
         >
-          {/* Sender name (useful later for group chat) */}
+          {/* Sender name */}
           {!isOwnMessage && !isTyping && (
             <p className="text-[10px] font-bold uppercase tracking-wide mb-1 text-gray-500">
               {sender}
@@ -47,30 +49,41 @@ const Message = ({
           {isTyping ? (
             <TypingDots />
           ) : (
-            <p className="text-sm leading-relaxed break-words">
-              {text}
-            </p>
+            <>
+              {type === "text" && <p className="text-sm leading-relaxed break-words">{text}</p>}
+
+              {type === "image" && attachment && (
+                <img
+                  src={attachment}
+                  alt="sent image"
+                  className="max-w-xs rounded-md"
+                />
+              )}
+
+              {type === "file" && attachment && (
+                <a
+                  href={attachment}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm underline break-words"
+                >
+                  {attachment.split("/").pop()}
+                </a>
+              )}
+            </>
           )}
 
           {/* TIME + STATUS */}
           {!isTyping && (
             <div className="flex justify-end items-center mt-1 text-[10px] opacity-80 space-x-1">
-              <span
-                className={`${
-                  isOwnMessage ? "text-white" : "text-gray-500"
-                }`}
-              >
+              <span className={`${isOwnMessage ? "text-white" : "text-gray-500"}`}>
                 {timestamp}
               </span>
 
               {isOwnMessage && status && (
-                <span
-                  className={`font-bold ${
-                    status === "Seen"
-                      ? "text-green-400"
-                      : "text-gray-300"
-                  }`}
-                >
+                <span className={`font-bold ${
+                  status === "Seen" ? "text-green-400" : "text-gray-300"
+                }`}>
                   {status === "Seen" ? "✓✓" : "✓"}
                 </span>
               )}
@@ -78,7 +91,7 @@ const Message = ({
           )}
         </div>
 
-        {/* REACTION AREA (reserved space) */}
+        {/* REACTION AREA */}
         {reactions.length > 0 && (
           <div
             className={`flex gap-1 mt-1 ${

@@ -126,6 +126,8 @@ export default function handler(req, res) {
       const roomId = [fromUserId, toUserId].sort().join("-");
       console.log(`📤 Message from ${fromUserId} to room ${roomId}:`, message);
 
+      console.log("user id & chat id on server ", fromUserId,currentChatId);
+
       io.to(roomId).emit("receive-message", { fromUserId, message, currentChatId });
 
 
@@ -137,7 +139,7 @@ export default function handler(req, res) {
       } else {
         const receiverSocketId = onlineUsers.get(toUserId);
         if (receiverSocketId) {
-          io.to(receiverSocketId).emit("message-delivered", { messageId: message.messageId, currentChatId });
+          io.to(receiverSocketId).emit("message-delivered", { messageId: message.messageId, currentChatId  });
           console.log("📬 Receiver offline, but socket exists. Marking as delivered:", message.messageId);
         }
       }

@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const router = useRouter();
 
   // State
+  const [chatMap, setchatMap] = useState({});
   const [AllUser, setAllUser] = useState([]);
   const [allMessage, setAllMessage] = useState([]);
   const [isProfileClicked, setIsProfileClicked] = useState(false);
@@ -205,7 +206,7 @@ export default function DashboardPage() {
       console.log("Fetched messages:", data);
       const msgs = Array.isArray(data?.data?.messages) ? data.data.messages : [];
 
-      setAllMessage([...msgs].reverse());
+      setAllMessage([...msgs]);
 
       chatId = data?.data?._id;
 
