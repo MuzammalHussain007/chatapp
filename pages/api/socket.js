@@ -58,7 +58,7 @@ export default function handler(req, res) {
       openChats.set(fromUserId, toUserId);
       const receiverSocketId = onlineUsers.get(toUserId);
       if (receiverSocketId) {
-        io.to(receiverSocketId).emit("chat-opened", { fromUserId });
+        io.to(receiverSocketId).emit("chat-opened", { toUserId });
         console.log("➡️ Notified", toUserId, "that chat is opened by", fromUserId);
       }
     });
