@@ -23,84 +23,68 @@ const Topbar = ({
 
     const init = async () => {
       socket = await getSocket();
-
       if (!socket) return;
 
-      console.log("Topbar socket connected:", socket.id);
-
-    
-      socket.on("user-offline", (otherUserId)=>{
-        console.log("user-offline received:", otherUserId);
-          socket.emit(
-          "get-last-seen",
-          otherUserId,
-          (timestamp) => {
-            console.log("last seen received:", timestamp);
+      socket.on("user-offline", (offlineUserId) => {
+        if (offlineUserId === otherUserId) {
+          socket.emit("get-last-seen", otherUserId, (timestamp) => {
             setLastSeen(timestamp ? new Date(timestamp) : null);
-          }
-        );
-
+          });
+        }
       });
     };
 
     init();
 
     return () => {
-      if (socket) {
-        socket.off("user-offline");
-      }
+      if (socket) socket.off("user-offline");
     };
   }, [otherUserId]);
 
   const formatLastSeen = (date) => {
-  if (!date) return "Offline";
+    if (!date) return "Offline";
 
-  const now = new Date();
-  const isToday = date.toDateString() === now.toDateString();
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
 
-  let hours = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(2, "0");
-  const ampm = hours >= 12 ? "PM" : "AM";
+    let hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
 
-  hours = hours % 12;
-  hours = hours === 0 ? 12 : hours; // handle 12 AM / 12 PM
-
-  return isToday
-    ? `Last seen today at ${hours}:${minutes} ${ampm}`
-    : `Last seen on ${date.toLocaleDateString()} at ${hours}:${minutes} ${ampm}`;
-};
-
+    return isToday
+      ? `Last seen today at ${hours}:${minutes} ${ampm}`
+      : `Last seen on ${date.toLocaleDateString()} at ${hours}:${minutes} ${ampm}`;
+  };
 
   return (
-    <div className="w-full p-4 h-20 flex bg-green-50 items-center justify-between">
+    <div className="w-full flex flex-col sm:flex-row items-center justify-between p-2 sm:p-4 bg-green-50 shadow-md">
       {profileClicked ? (
-        <div className="flex items-center gap-4">
-          <div className="relative w-10 h-10 flex items-center justify-center">
+        <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+          <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
             <Image
               src={srcURL || "/globe.svg"}
               fill
               className="rounded-full object-cover"
-              alt=""
+              alt="User Avatar"
               unoptimized
             />
-
             <span
-              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+              className={`absolute bottom-0 right-0 w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-white ${
                 isOnlineState ? "bg-green-500" : "bg-gray-400"
               }`}
             />
           </div>
 
-          <div className="flex flex-col justify-center">
-            <p className="font-semibold">{name}</p>
-
+          <div className="flex flex-col justify-center min-w-0">
+            <p className="font-semibold text-sm sm:text-base truncate">{name}</p>
             {isTyping ? (
-              <p className="text-sm text-green-600 italic animate-pulse">
+              <p className="text-xs sm:text-sm text-green-600 italic animate-pulse truncate">
                 typing...
               </p>
             ) : (
               <p
-                className={`text-sm ${
+                className={`text-xs sm:text-sm truncate ${
                   isOnlineState ? "text-green-600" : "text-gray-500"
                 }`}
               >
@@ -115,7 +99,7 @@ const Topbar = ({
 
       <button
         onClick={() => signOut({ callbackUrl: "/login" })}
-        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
+        className="mt-2 sm:mt-0 px-3 sm:px-4 py-1 sm:py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs sm:text-sm"
       >
         Sign Out
       </button>

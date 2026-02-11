@@ -7,10 +7,8 @@ export default function MessageArea({ fromUser, toUser, socketRef, onMessageSent
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const typingTimeoutRef = useRef(null);
 
-  // 🔹 Typing handler
   const handleTyping = () => {
     socketRef.current?.emit("typing", { fromUserId: fromUser, toUserId: toUser });
-
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     typingTimeoutRef.current = setTimeout(() => {
@@ -18,20 +16,15 @@ export default function MessageArea({ fromUser, toUser, socketRef, onMessageSent
     }, 800);
   };
 
-  // 🔹 Emoji select handler
   const onEmojiClick = (emojiObject) => {
     setMessage((prev) => prev + emojiObject.emoji);
-    handleTyping(); // emoji counts as typing
+    handleTyping();
   };
 
-  // 🔹 Send message
   const sendMessage = () => {
     if (!message.trim()) return;
 
-    const myHeaders = new Headers();
-    myHeaders.append("Content-Type", "application/json");
-
-    const raw = JSON.stringify({
+    const payload = {
       toUser,
       fromUser,
       message: {
@@ -39,17 +32,15 @@ export default function MessageArea({ fromUser, toUser, socketRef, onMessageSent
         sender: fromUser,
         text: message,
       },
-    });
+    };
 
     fetch("http://localhost:3000/api/message", {
       method: "POST",
-      headers: myHeaders,
-      body: raw,
-      redirect: "follow",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     })
       .then((res) => res.json())
       .then((result) => {
-        console.log("Message sent successfully:", result);
         onMessageSent(result.data);
         socketRef.current?.emit("stop-typing", { fromUserId: fromUser, toUserId: toUser });
         setMessage("");
@@ -57,7 +48,6 @@ export default function MessageArea({ fromUser, toUser, socketRef, onMessageSent
       .catch((err) => console.error("Error sending message:", err));
   };
 
-  // 🔹 Handle Enter key
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -66,24 +56,21 @@ export default function MessageArea({ fromUser, toUser, socketRef, onMessageSent
   };
 
   return (
-    <div className="flex flex-col gap-2 relative">
-      {/* Emoji picker */}
+    <div className="flex flex-col gap-2 relative w-full">
       {showEmojiPicker && (
-        <div className="absolute bottom-16 left-0 z-50">
+        <div className="absolute bottom-16 left-0 z-50 sm:left-2">
           <EmojiPicker onEmojiClick={onEmojiClick} />
         </div>
       )}
 
-      
-
-      <div className="flex items-center gap-3">
-         <button
+      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full">
+        <button
           onClick={() => setShowEmojiPicker((prev) => !prev)}
-          className="px-3 py-2 bg-yellow-400 hover:bg-yellow-500 rounded-lg"
+          className="px-3 py-2 bg-yellow-400 hover:bg-yellow-500 rounded-lg transition"
         >
           😀
         </button>
-        
+
         <textarea
           value={message}
           placeholder="Type a message..."
@@ -93,16 +80,12 @@ export default function MessageArea({ fromUser, toUser, socketRef, onMessageSent
             handleTyping();
           }}
           onKeyDown={handleKeyDown}
-          className="flex-1 resize-none border rounded-lg p-3 focus:outline-none"
+          className="flex-1 min-h-[36px] max-h-28 resize-none border rounded-lg p-2 sm:p-3 focus:outline-none overflow-y-auto w-full"
         />
 
-        {/* Emoji toggle button */}
-       
-
-        {/* Send button */}
         <button
           onClick={sendMessage}
-          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+          className="px-4 sm:px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition w-full sm:w-auto"
         >
           Send
         </button>

@@ -9,7 +9,8 @@ const UserInfo = ({ username, imageSrc, onClick, isOnline, deliveredCount }) => 
                  bg-gradient-to-r from-white to-gray-50
                  rounded-2xl shadow-lg hover:shadow-2xl
                  cursor-pointer transition-all duration-300
-                 transform hover:scale-105 w-72 h-20"
+                 transform hover:scale-105
+                 w-full max-w-[280px] h-auto sm:h-20"
     >
       {/* Avatar */}
       <div className="relative shrink-0 w-14 h-14 flex items-center justify-center">
@@ -30,15 +31,15 @@ const UserInfo = ({ username, imageSrc, onClick, isOnline, deliveredCount }) => 
       </div>
 
       {/* Username */}
-      <div className="flex-1 flex flex-col justify-center">
-        <h2 className="text-xs font-bold text-gray-800 truncate">
+      <div className="flex-1 flex flex-col justify-center min-w-0">
+        <h2 className="text-sm sm:text-xs font-bold text-gray-800 truncate">
           {username}
         </h2>
       </div>
 
       {/* Status badge (bottom-right) */}
       <span
-        className={`absolute bottom-0 right-0 px-3 py-1 text-xs font-bold
+        className={`absolute bottom-0 right-0 px-2 sm:px-3 py-0.5 text-xs font-bold
           rounded-full ${isOnline ? "text-green-500" : "text-white"} 
           ${isOnline ? "bg-white" : "bg-gray-500"}
         `}

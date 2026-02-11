@@ -274,9 +274,9 @@ export default function DashboardPage() {
 
   return (
     <div className="h-screen bg-green-50 text-black overflow-hidden">
-      <div className="flex h-[calc(100vh-34px)]">
+      <div className="h-screen bg-green-50 text-black flex flex-col md:flex-row overflow-hidden">
 
-        <div className="leftside w-[30vw] bg-green-50 h-screen flex flex-col p-5">
+        <div className="leftside w-full md:w-1/3 lg:w-1/4  bg-green-50 h-screen flex flex-col p-4">
           <div className="mb-4">
             <UserProfile
               srcURL={session.user.image}
@@ -300,7 +300,7 @@ export default function DashboardPage() {
         </div>
 
 
-        <div className="rightSide w-[70vw] bg-white h-screen flex flex-col">
+        <div className="rightSide w-[70vw] bg-white h-screen flex-1 flex flex-col">
           <Topbar
             otherUserId={otherUserRef.current?._id}
             isTyping={isTyping}
@@ -312,7 +312,7 @@ export default function DashboardPage() {
 
           {isProfileClicked ? (
             <>
-              <div className="overflow-y-auto pb-14 pl-5 pr-5 flex flex-col" ref={messagesEndRef}>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-pink-400 scrollbar-track-pink-100" ref={messagesEndRef}>
                 {currentMessages.map((item, index) => (
                   <Message
                     key={index}
