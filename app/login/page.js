@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState ,useEffect} from "react";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+
 
 export default function HeartTouchingLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const router = useRouter();
+  const { status } = useSession();
+
+
+  useEffect(() => {
+  if (status === "authenticated") {
+    router.replace("/dashboard");
+  }
+}, [status, router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -24,7 +36,7 @@ export default function HeartTouchingLogin() {
     });
 
     if (res?.error) setError(res.error);
-    else window.location.href = "/";
+    else router.replace("/dashboard");
   };
 
   return (
@@ -66,13 +78,13 @@ export default function HeartTouchingLogin() {
 
         <div className="mt-6 flex flex-col gap-3">
           <button
-            onClick={() => signIn("google")}
+            onClick={() => signIn("google",{callbackUrl:"/dashboard"})}
             className="flex items-center justify-center border border-gray-300 p-3 rounded-xl hover:bg-gray-100 transition-colors"
           >
             ❤️ Login with Google
           </button>
           <button
-            onClick={() => signIn("github")}
+            onClick={() => signIn("github",{callbackUrl:"/dashboard"})}
             className="flex items-center justify-center border border-gray-300 p-3 rounded-xl hover:bg-gray-100 transition-colors"
           >
             💻 Login with GitHub

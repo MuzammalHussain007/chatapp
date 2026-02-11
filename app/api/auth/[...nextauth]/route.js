@@ -33,8 +33,8 @@ export const authOptions = {
         return {
           _id: user._id.toString(),
           email: user.email,
-          name : user.name,
-          image : user.picture
+          name: user.name,
+          image: user.picture
         };
       },
     }),
@@ -54,6 +54,12 @@ export const authOptions = {
     error: "/login",
   },
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return baseUrl + url;
+      if (url.startsWith(baseUrl)) return url;
+      return baseUrl;
+    },
+
     async signIn({ user, account, profile }) {
       const client = await clientPromise;
       const db = client.db("authentication");
@@ -68,6 +74,10 @@ export const authOptions = {
           createdAt: new Date(),
         });
       }
+
+      user._id = existingUser._id.toString();
+      user.name = existingUser.name;
+      user.image = existingUser.picture || null;
 
       return true; // allow sign-in
     },

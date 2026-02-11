@@ -8,6 +8,7 @@ import MessageArea from "@/componants/message-area";
 import Emptycard from "@/componants/emptycard";
 import Topbar from "@/componants/topbar";
 import Message from "@/componants/Message";
+import Loader from "@/componants/Loader";
 import { getSocket } from "@/lib/socket-client";
 import UserProfile from "@/componants/userprofile";
 
@@ -266,7 +267,7 @@ export default function DashboardPage() {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  if (status === "loading") return <div className="p-8">Loading...</div>;
+  if (status === "loading") return <div className="p-8"><Loader/></div>;
   if (!session) return null;
 
   const currentMessages = chatMap[currentChatId] || [];
