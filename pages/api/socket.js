@@ -126,10 +126,12 @@ export default function handler(req, res) {
       const roomId = [fromUserId, toUserId].sort().join("-");
       console.log(`📤 Message from ${fromUserId} to room ${roomId}:`, message);
 
-      console.log("user id & chat id on server ", fromUserId,currentChatId);
+      console.log("user id & chat id on server ", fromUserId, currentChatId);
 
       io.to(roomId).emit("receive-message", { fromUserId, message, currentChatId });
 
+
+    
 
       // Check if receiver has chat open for this sender
       if (openChats.get(toUserId) === fromUserId) {
@@ -139,7 +141,7 @@ export default function handler(req, res) {
       } else {
         const receiverSocketId = onlineUsers.get(toUserId);
         if (receiverSocketId) {
-          io.to(receiverSocketId).emit("message-delivered", { messageId: message.messageId, currentChatId  });
+          io.to(receiverSocketId).emit("message-delivered", { messageId: message.messageId, currentChatId });
           console.log("📬 Receiver offline, but socket exists. Marking as delivered:", message.messageId);
         }
       }
@@ -169,9 +171,9 @@ export default function handler(req, res) {
 
 
     socket.on("disconnect", (reason) => {
-      const userId = socket.userId;  
+      const userId = socket.userId;
 
-      if (!userId) return;  
+      if (!userId) return;
 
       onlineUsers.delete(userId);
       openChats.delete(userId); // clear open chats on disconnect
@@ -189,7 +191,7 @@ export default function handler(req, res) {
     });
 
 
- 
+
 
 
 

@@ -13,23 +13,23 @@ export default async function handler(req, res) {
 
     const client = await clientPromise;
     const db = client.db("authentication");
-    const collection = db.collection("message"); // your chat collection
+    const collection = db.collection("message");
 
-    // Find all chats where this user is a participant
     const chats = await collection
       .find(
         { participants: userId },
-        { projection: { unseenCount: 1 } } // only need unseenCount
+        { projection: { unseenCount: 1 } }
       )
       .toArray();
 
-    // Build response with chat id and unseen count for the user
-    const unseenPerChat = chats.map((chat) => ({
-      chatId: chat._id,
-      unseenCount: chat.unseenCount?.[userId] || 0,
-    }));
+    const unseenMap = {};
 
-    return res.status(200).json({ unseenPerChat });
+    chats.forEach(chat => {
+      unseenMap[chat._id] = chat.unseenCount?.[userId] || 0;
+    });
+
+    return res.status(200).json(unseenMap);
+
   } catch (error) {
     console.error("Error fetching unseen count:", error);
     return res.status(500).json({ message: "Internal Server Error" });

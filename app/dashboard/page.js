@@ -60,36 +60,68 @@ export default function DashboardPage() {
       socketRef.current.on("receive-message", (data) => {
         if (!data?.message) return;
         const senderId = data.message.sender;
-        const chatKey = data.chatId || senderId;
+        const chatKey = data.currentChatId;
 
         setchatMap(prev => {
           const prevMessages = prev[chatKey] || [];
           const updatedMessages = [...prevMessages, data.message];
-
-          // If this chat is active, mark message as Seen immediately
-          if (chatKey === currentChatRef.current) {
-            updatedMessages[updatedMessages.length - 1].status = "Seen";
-            socketRef.current.emit("message-seen", {
-              messageId: data.message.messageId,
-              toUserId: senderId,
-              currentChatId: chatKey,
-            });
-            updateStatusAPI(chatKey, data.message.messageId, "Seen");
-          }
-
           return { ...prev, [chatKey]: updatedMessages };
         });
 
-        // Increment unseen count only if chat is not active
-        if (chatKey !== currentChatRef.current) {
-          setUnseenCountMap(prev => ({
-            ...prev,
-            [senderId]: (prev[senderId] || 0) + 1,
-          }));
-        }
+
+
+        socketRef.current.on("chat-opened", ({ toUserId }) => {
+          console.log("chat is opended to user ", toUserId)
+          const chatKey = currentChatRef.current;
+          if (!chatKey) return;
+
+          setchatMap(prev => {
+            console.log("i am in chat map ")
+            const messages = prev[chatKey] || [];
+            const unseenMessages = messages.filter(
+              m => {
+                console.log("sender id ", m.sender)
+                console.log("message status ", m.status)
+
+                return m.sender === toUserId && m.status !== "Seen"
+              }
+
+            );
+
+
+            console.log("")
+            console.log("i am before return ")
+            if (unseenMessages.length === 0) return prev;
+            console.log("i am after return ")
+
+            unseenMessages.forEach(m => {
+              console.log("for each loop")
+              socketRef.current.emit("message-seen", {
+                messageId: m.messageId,
+                toUserId,
+                currentChatId: chatKey,
+              });
+              updateStatusAPI(chatKey, m.messageId, "Seen");
+            });
+
+            const updated = messages.map(m =>
+              unseenMessages.includes(m) ? { ...m, status: "Seen" } : m
+            );
+
+            return { ...prev, [chatKey]: updated };
+          });
+        });
+
+        // // Increment unseen count only if chat is not active
+        // if (chatKey !== currentChatRef.current) {
+        //   setUnseenCountMap(prev => ({
+        //     ...prev,
+        //     [senderId]: (prev[senderId] || 0) + 1,
+        //   }));
+        // }
       });
 
-      // Message seen updates
+     
       socketRef.current.on("message-seen", ({ messageId, currentChatId }) => {
         setchatMap(prev => {
           const messages = prev[currentChatId] || [];
@@ -100,47 +132,7 @@ export default function DashboardPage() {
         });
       });
 
-      socketRef.current.on("chat-opened", ({ toUserId }) => {
-        console.log("chat is opended to user ", toUserId)
-        const chatKey = currentChatRef.current;
-        if (!chatKey) return;
 
-        setchatMap(prev => {
-          console.log("i am in chat map ")
-          const messages = prev[chatKey] || [];
-          const unseenMessages = messages.filter(
-            m => {
-              console.log("sender id ",m.sender)
-                console.log("message status ",m.status)
-              
-           return   m.sender === toUserId && m.status !== "Seen"
-            }
-
-          );
-
-
-          console.log("")
-          console.log("i am before return ")
-          if (unseenMessages.length === 0) return prev;
-          console.log("i am after return ")
-
-          unseenMessages.forEach(m => {
-            console.log("for each loop")
-            socketRef.current.emit("message-seen", {
-              messageId: m.messageId,
-              toUserId,
-              currentChatId: chatKey,
-            });
-            updateStatusAPI(chatKey, m.messageId, "Seen");
-          });
-
-          const updated = messages.map(m =>
-            unseenMessages.includes(m) ? { ...m, status: "Seen" } : m
-          );
-
-          return { ...prev, [chatKey]: updated };
-        });
-      });
     };
 
     setupSocket();
@@ -267,7 +259,7 @@ export default function DashboardPage() {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  if (status === "loading") return <div className="p-8"><Loader/></div>;
+  if (status === "loading") return <div className="p-8"><Loader /></div>;
   if (!session) return null;
 
   const currentMessages = chatMap[currentChatId] || [];
@@ -339,10 +331,10 @@ export default function DashboardPage() {
                     if (!currentChatId) return;
                     const lastMessage = response.message?.[response.message.length - 1];
 
-                    setchatMap(prev => ({
-                      ...prev,
-                      [currentChatId]: [...(prev[currentChatId] || []), lastMessage],
-                    }));
+                    // setchatMap(prev => ({
+                    //   ...prev,
+                    //   [currentChatId]: [...(prev[currentChatId] || []), lastMessage],
+                    // }));
 
                     socketRef.current?.emit("send-message", {
                       fromUserId: session.user._id,
