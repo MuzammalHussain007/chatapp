@@ -141,7 +141,7 @@ export default function handler(req, res) {
       } else {
         const receiverSocketId = onlineUsers.get(toUserId);
         if (receiverSocketId) {
-          io.to(receiverSocketId).emit("message-delivered", { messageId: message.messageId, currentChatId });
+          io.to(receiverSocketId).emit("message-delivered", { messageId: message.messageId, currentChatId ,senderId : message.sender });
           console.log("📬 Receiver offline, but socket exists. Marking as delivered:", message.messageId);
         }
       }

@@ -223,7 +223,7 @@ export default function DashboardPage() {
       toUserId: user._id,
     });
 
-    socketRef.current.on("message-delivered", ({ messageId, currentChatId }) => {
+    socketRef.current.on("message-delivered", ({ messageId, currentChatId,senderId }) => {
       setchatMap(prev => {
         const messages = prev[currentChatId] || [];
         const updated = messages.map(m =>
@@ -233,6 +233,12 @@ export default function DashboardPage() {
         );
         return { ...prev, [currentChatId]: updated };
       });
+
+       setUnseenCountMap(prev => ({
+            ...prev,
+            [senderId]: (prev[senderId] || 0) + 1,
+          }));
+
       updateStatusAPI(currentChatId, messageId, "Delivered");
     });
   };
