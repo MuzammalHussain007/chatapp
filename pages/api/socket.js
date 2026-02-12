@@ -125,23 +125,31 @@ export default function handler(req, res) {
     socket.on("send-message", ({ fromUserId, toUserId, message, currentChatId }) => {
       const roomId = [fromUserId, toUserId].sort().join("-");
       console.log(`📤 Message from ${fromUserId} to room ${roomId}:`, message);
-
-      console.log("user id & chat id on server ", fromUserId, currentChatId);
-
-      io.to(roomId).emit("receive-message", { fromUserId, message, currentChatId });
+      // io.to(roomId).emit("receive-message", { fromUserId, message, currentChatId });
 
 
-    
+      const receiverSocketId = onlineUsers.get(toUserId);
 
-      // Check if receiver has chat open for this sender
+        const isReceiverInRoom =
+    receiverSocketId &&
+    io.sockets.adapter.rooms.get(roomId)?.has(receiverSocketId);
+
+
+
+      if (isReceiverInRoom) {
+        io.to(roomId).emit("receive-message", { fromUserId, message, currentChatId });
+      } else if (receiverSocketId) {
+      }
+
+
       if (openChats.get(toUserId) === fromUserId) {
         console.log("chat id for given chat", currentChatId)
         console.log("👀 Receiver has chat open, marking as seen:", message.messageId);
         io.to(roomId).emit("message-seen", { messageId: message.messageId, currentChatId });
       } else {
-        const receiverSocketId = onlineUsers.get(toUserId);
         if (receiverSocketId) {
-          io.to(receiverSocketId).emit("message-delivered", { messageId: message.messageId, currentChatId ,senderId : message.sender });
+          io.to(receiverSocketId).emit("receive-message", { fromUserId, message, currentChatId });
+          io.to(receiverSocketId).emit("message-delivered", { messageId: message.messageId, currentChatId, senderId: message.sender });
           console.log("📬 Receiver offline, but socket exists. Marking as delivered:", message.messageId);
         }
       }
